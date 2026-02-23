@@ -1,0 +1,5 @@
+outs:
+- md5: b59539160978800f161fd201d941fa6c
+  size: 295354
+  hash: md5
+  path: perth_solar_raw.csv

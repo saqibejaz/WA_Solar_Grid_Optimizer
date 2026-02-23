@@ -1,0 +1,22 @@
+# Python junk
+__pycache__/
+*.py[cod]
+*$py.class
+venv_WASGO/
+.env
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# MLOps / Tracking
+mlruns/
+.dvc/config.local
+
+# Operating System
+Thumbs.db
+.DS_Store
+
+# Data (DVC will usually handle this, but as a backup)
+data/raw/*
+!data/raw/*.dvc
+!data/raw/.gitignore

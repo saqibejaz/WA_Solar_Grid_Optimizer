@@ -1,0 +1,5 @@
+outs:
+- md5: 8127772c2c6021bbf87df679f3c4cf71
+  size: 967
+  hash: md5
+  path: scaler_Daylight_Optimized.pkl

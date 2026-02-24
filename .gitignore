@@ -14,6 +14,13 @@ venv_WASGO/
 # MLOps / Tracking
 mlruns/
 .dvc/config.local
+mlflow.db
+.mlflow/
+
+# Large binary artifacts/models
+artifacts/*.pkl
+artifacts/*.npy
+models/
 
 # Operating System
 Thumbs.db

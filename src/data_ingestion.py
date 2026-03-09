@@ -4,7 +4,9 @@ import pandas as pd
 import requests
 
 
-def fetch_wa_solar_data(start_date="2024-01-01", end_date="2024-12-31"):
+def fetch_wa_solar_data(
+    start_date="2024-01-01", end_date="2024-12-31", output_path=None
+):
     """Fetch historical solar and cloud data for Perth from Open-Meteo."""
     print(f"🚀 Initializing data pull for Perth: {start_date} to {end_date}...")
 
@@ -28,8 +30,9 @@ def fetch_wa_solar_data(start_date="2024-01-01", end_date="2024-12-31"):
         df = pd.DataFrame(data["hourly"])
         df["time"] = pd.to_datetime(df["time"])
 
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        output_path = os.path.join(base_dir, "data", "raw", "perth_solar_raw.csv")
+        if output_path is None:
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            output_path = os.path.join(base_dir, "data", "raw", "perth_solar_raw.csv")
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
         df.to_csv(output_path, index=False)

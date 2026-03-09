@@ -10,7 +10,6 @@ import sys
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
-import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from data_ingestion import fetch_wa_solar_data  # noqa: E402
@@ -36,31 +35,27 @@ MOCK_API_RESPONSE = {
 
 class TestFetchWaSolarData:
     @patch("data_ingestion.requests.get")
-    def test_returns_dataframe_on_success(self, mock_get, tmp_path, monkeypatch):
+    def test_returns_dataframe_on_success(self, mock_get, tmp_path):
         """Should return a DataFrame when the API call succeeds."""
-        # Set up the mock to return our fake response
         mock_response = MagicMock()
         mock_response.json.return_value = MOCK_API_RESPONSE
         mock_response.raise_for_status = MagicMock()
         mock_get.return_value = mock_response
 
-        # Redirect file output to tmp_path
-        monkeypatch.chdir(tmp_path)
-
-        result = fetch_wa_solar_data()
+        output = os.path.join(tmp_path, "perth_solar_raw.csv")
+        result = fetch_wa_solar_data(output_path=output)
         assert isinstance(result, pd.DataFrame)
 
     @patch("data_ingestion.requests.get")
-    def test_dataframe_has_correct_columns(self, mock_get, tmp_path, monkeypatch):
+    def test_dataframe_has_correct_columns(self, mock_get, tmp_path):
         """Returned DataFrame should contain the expected columns."""
         mock_response = MagicMock()
         mock_response.json.return_value = MOCK_API_RESPONSE
         mock_response.raise_for_status = MagicMock()
         mock_get.return_value = mock_response
 
-        monkeypatch.chdir(tmp_path)
-
-        result = fetch_wa_solar_data()
+        output = os.path.join(tmp_path, "perth_solar_raw.csv")
+        result = fetch_wa_solar_data(output_path=output)
         expected_cols = {
             "time",
             "direct_normal_irradiance",
@@ -70,23 +65,22 @@ class TestFetchWaSolarData:
         assert expected_cols.issubset(set(result.columns))
 
     @patch("data_ingestion.requests.get")
-    def test_returns_none_on_api_failure(self, mock_get, tmp_path, monkeypatch):
+    def test_returns_none_on_api_failure(self, mock_get, tmp_path):
         """Should return None gracefully when the API call fails."""
         mock_get.side_effect = Exception("Network error")
-        monkeypatch.chdir(tmp_path)
 
-        result = fetch_wa_solar_data()
+        output = os.path.join(tmp_path, "perth_solar_raw.csv")
+        result = fetch_wa_solar_data(output_path=output)
         assert result is None
 
     @patch("data_ingestion.requests.get")
-    def test_time_column_is_datetime(self, mock_get, tmp_path, monkeypatch):
+    def test_time_column_is_datetime(self, mock_get, tmp_path):
         """The time column should be parsed as datetime, not a string."""
         mock_response = MagicMock()
         mock_response.json.return_value = MOCK_API_RESPONSE
         mock_response.raise_for_status = MagicMock()
         mock_get.return_value = mock_response
 
-        monkeypatch.chdir(tmp_path)
-
-        result = fetch_wa_solar_data()
+        output = os.path.join(tmp_path, "perth_solar_raw.csv")
+        result = fetch_wa_solar_data(output_path=output)
         assert pd.api.types.is_datetime64_any_dtype(result["time"])

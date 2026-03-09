@@ -1,18 +1,14 @@
 """
 Tests for data_validation.py — validate_perth_data()
 
-We mock the file path by writing temp CSVs from our fixtures,
-so no real data file is needed.
+We write temp CSVs from our fixtures so no real data file is needed.
 """
 
 import os
-import sys
 
 import pandas as pd
-import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-from data_validation import validate_perth_data  # noqa: E402
+from data_validation import validate_perth_data
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -46,9 +42,8 @@ class TestValidatePerthData:
     def test_missing_values_detected(self, sample_solar_df, tmp_path):
         """Validation should run even when NaNs are present (no crash)."""
         df = sample_solar_df.copy()
-        df.loc[0, "cloud_cover"] = None  # introduce a missing value
+        df.loc[0, "cloud_cover"] = None
         path = write_temp_csv(df, tmp_path)
-        # Should not raise — just report the null
         result = validate_perth_data(file_path=path)
         assert isinstance(result, bool)
 

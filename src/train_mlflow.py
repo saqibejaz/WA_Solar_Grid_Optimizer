@@ -17,8 +17,13 @@ ARTIFACTS_DIR = os.path.join(PROJECT_ROOT, "artifacts")
 def run_experiment(experiment_name: str, daylight_flag: bool) -> None:
     """Train a RandomForest and log everything to MLflow."""
 
-    # Pin MLflow tracking to project root regardless of where script is called from
-    mlflow.set_tracking_uri(f"sqlite:///{os.path.join(PROJECT_ROOT, 'mlflow.db')}")
+    # In Docker: uses MLFLOW_TRACKING_URI env var (set in docker-compose.yml)
+    # Locally: falls back to sqlite in project root
+    tracking_uri = os.environ.get(
+        "MLFLOW_TRACKING_URI",
+        f"sqlite:///{os.path.join(PROJECT_ROOT, 'mlflow.db')}",
+    )
+    mlflow.set_tracking_uri(tracking_uri)
 
     with mlflow.start_run(run_name=experiment_name):
         X_train, X_test, y_train, y_test, scaler = prepare_data(

@@ -1,0 +1,49 @@
+name: CI Pipeline
+
+# Triggers — runs on every push and pull request to main
+on:
+  push:
+    branches: [main, feature/*]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Check out the code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Set up Python
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 3. Cache pip dependencies — speeds up subsequent runs
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements-dev.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # 4. Install dependencies
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      # 5. Run ruff linter
+      - name: Lint with ruff
+        run: ruff check src/
+
+      # 6. Run ruff formatter check (doesn't modify files, just checks)
+      - name: Check formatting with ruff
+        run: ruff format --check src/
+
+      # 7. Run pytest
+      - name: Run tests
+        run: pytest

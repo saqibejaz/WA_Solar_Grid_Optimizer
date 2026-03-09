@@ -6,13 +6,11 @@ so no real data file is needed.
 """
 
 import os
-import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 import numpy as np
 import pandas as pd
-import pytest
+
+from preprocessing import prepare_data
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -20,17 +18,10 @@ import pytest
 
 
 def write_temp_csv(df: pd.DataFrame, tmp_path) -> str:
-    """Write a dataframe to a temp CSV and return the path."""
     path = os.path.join(tmp_path, "test_solar.csv")
     df.to_csv(path, index=False)
     return path
 
-
-# ---------------------------------------------------------------------------
-# We import after helpers so pytest path resolution works cleanly
-# ---------------------------------------------------------------------------
-
-from preprocessing import prepare_data  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Tests
@@ -57,7 +48,7 @@ class TestPrepareData:
         X_train, X_test, _, _, _ = prepare_data(path, daylight_only=False)
         total = X_train.shape[0] + X_test.shape[0]
         test_ratio = X_test.shape[0] / total
-        assert 0.15 <= test_ratio <= 0.25  # allow small rounding variance
+        assert 0.15 <= test_ratio <= 0.25
 
     def test_daylight_filter_reduces_rows(self, sample_solar_df, tmp_path):
         """Daylight filtering should return fewer rows than no filter."""
@@ -76,7 +67,6 @@ class TestPrepareData:
         """X_train values should be roughly zero-centred after scaling."""
         path = write_temp_csv(sample_solar_df, tmp_path)
         X_train, _, _, _, _ = prepare_data(path, daylight_only=False)
-        # Mean of scaled training data should be close to 0
         assert abs(X_train.mean()) < 0.5
 
     def test_no_nulls_in_output(self, sample_solar_df, tmp_path):

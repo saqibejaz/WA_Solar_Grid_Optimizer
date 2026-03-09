@@ -6,13 +6,11 @@ This is standard practice — you test YOUR code, not the API.
 """
 
 import os
-import sys
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-from data_ingestion import fetch_wa_solar_data  # noqa: E402
+from data_ingestion import fetch_wa_solar_data
 
 # ---------------------------------------------------------------------------
 # Fake API response — mimics what Open-Meteo actually returns

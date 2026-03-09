@@ -28,7 +28,7 @@ def fetch_wa_solar_data(start_date="2024-01-01", end_date="2024-12-31"):
         df = pd.DataFrame(data["hourly"])
         df["time"] = pd.to_datetime(df["time"])
 
-        base_dir = os.path.dirname(os.path.abspath(__file__))
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         output_path = os.path.join(base_dir, "data", "raw", "perth_solar_raw.csv")
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 

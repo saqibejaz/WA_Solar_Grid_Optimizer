@@ -8,7 +8,10 @@ from sklearn.metrics import mean_absolute_error, r2_score
 from preprocessing import prepare_data
 
 DATA_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "data", "raw", "perth_solar_raw.csv"
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "data",
+    "raw",
+    "perth_solar_raw.csv",
 )
 
 
@@ -27,8 +30,8 @@ def run_experiment(experiment_name: str, daylight_flag: bool) -> None:
         r2 = r2_score(y_test, preds)
 
         mlflow.log_param("daylight_only_filter", daylight_flag)
-        mlflow.log_metric("mae", mae)
-        mlflow.log_metric("r2_score", r2)
+        mlflow.log_metric("mae", mae, step=0)
+        mlflow.log_metric("r2_score", r2, step=1)
 
         os.makedirs("artifacts", exist_ok=True)
         scaler_path = f"artifacts/scaler_{experiment_name}.pkl"

@@ -10,7 +10,7 @@ def validate_perth_data(file_path: str | None = None) -> bool:
     Returns True if all checks pass, False otherwise.
     """
     if file_path is None:
-        base_dir = os.path.dirname(os.path.abspath(__file__))
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         file_path = os.path.join(base_dir, "data", "raw", "perth_solar_raw.csv")
 
     df = pd.read_csv(file_path)

@@ -20,3 +20,13 @@ repos:
       - id: trailing-whitespace
       # Validates YAML files (e.g. GitHub Actions workflows)
       - id: check-yaml
+
+  - repo: local
+    hooks:
+      # Runs your full test suite before every commit
+      - id: pytest
+        name: pytest
+        entry: pytest
+        language: system
+        pass_filenames: false
+        always_run: true

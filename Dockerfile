@@ -30,7 +30,7 @@ FROM python:3.12-slim AS runtime
 
 LABEL org.opencontainers.image.title="WA Solar Grid Optimizer API" \
       org.opencontainers.image.description="FastAPI DNI inference service — Perth, WA" \
-      org.opencontainers.image.version="0.4.0"
+      org.opencontainers.image.version="1.0.0"
 
 # Non-root user
 RUN useradd --create-home --shell /bin/bash solar
@@ -69,3 +69,28 @@ CMD ["sh", "-c", \
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD python -c \
         "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+
+# ── Stage 3: lean production image ───────────────────────────────────────────────
+FROM python:3.12-slim AS production
+LABEL org.opencontainers.image.version="1.0.0"
+
+RUN useradd --create-home --shell /bin/bash solar
+WORKDIR /app
+
+COPY requirements-serve.txt ./
+RUN pip install --upgrade pip \
+ && pip install --no-cache-dir -r requirements-serve.txt
+
+# Copy app and pre-exported artefacts directly into the image
+COPY app/main.py ./main.py
+COPY artifacts/model.joblib ./artifacts/model.joblib
+COPY artifacts/scaler_Daylight_Optimized.pkl ./artifacts/scaler_Daylight_Optimized.pkl
+
+RUN chown -R solar:solar /app
+USER solar
+
+ENV MODEL_DIR=/app/artifacts \
+    PORT=8000
+
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

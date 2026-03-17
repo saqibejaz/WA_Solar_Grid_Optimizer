@@ -14,7 +14,15 @@ from pathlib import Path
 from typing import Any
 
 import joblib
-import mlflow
+
+try:
+    import mlflow
+
+    MLFLOW_AVAILABLE = True
+except ImportError:
+    MLFLOW_AVAILABLE = False
+    logging.info("MLflow not available — joblib-only mode.")
+
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Request, status
@@ -56,59 +64,50 @@ state = AppState()
 def _load_model() -> None:
     """
     Load order:
-      1. MLflow registry        → models:/wa_solar_irradiance/Production
-      2. Latest MLflow run      → most recent run logged by train_mlflow.py
-      3. Latest *.joblib        → MODEL_DIR fallback
-      4. Latest scaler_*.pkl   → artifacts/ (always)
+      1. MLflow registry    → models:/wa_solar_irradiance/Production  (dev only)
+      2. Latest MLflow run  → most recent run logged by train_mlflow.py (dev only)
+      3. Latest *.joblib    → MODEL_DIR (production image fallback)
+      4. Latest scaler_*.pkl → artifacts/ (always)
     """
-    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    if MLFLOW_AVAILABLE:
+        mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
-    # 1. MLflow registry
-    try:
-        model_uri = "models:/wa_solar_irradiance/Production"
-        state.model = mlflow.sklearn.load_model(model_uri)
-        state.model_meta = {"source": "mlflow_registry", "uri": model_uri}
-        log.info("✅ Model loaded from MLflow registry: %s", model_uri)
-    except Exception as exc:
-        log.warning("MLflow registry unavailable (%s), trying latest MLflow run …", exc)
-
-        # 2. Latest run logged by train_mlflow.py
+        # 1. MLflow registry
         try:
-            client = mlflow.tracking.MlflowClient()
-            # train_mlflow.py doesn't set an experiment name, so runs land in Default (id "0")
-            runs = client.search_runs(
-                experiment_ids=["0"],
-                order_by=["start_time DESC"],
-                max_results=1,
+            model_uri = "models:/wa_solar_irradiance/Production"
+            state.model = mlflow.sklearn.load_model(model_uri)
+            state.model_meta = {"source": "mlflow_registry", "uri": model_uri}
+            log.info("✅ Model loaded from MLflow registry: %s", model_uri)
+        except Exception as exc:
+            log.warning(
+                "MLflow registry unavailable (%s), trying latest MLflow run …", exc
             )
-            if runs:
-                run_id = runs[0].info.run_id
-                model_uri = f"runs:/{run_id}/random_forest_model"
-                state.model = mlflow.sklearn.load_model(model_uri)
-                state.model_meta = {"source": "mlflow_run", "run_id": run_id}
-                log.info("✅ Model loaded from MLflow run: %s", run_id)
-            else:
-                raise ValueError("No MLflow runs found")
-        except Exception as exc2:
-            log.warning("MLflow run load failed (%s), trying local .joblib …", exc2)
 
-            # 3. Latest joblib in MODEL_DIR
-            candidates = sorted(
-                MODEL_DIR.glob("*.joblib"),
-                key=lambda p: p.stat().st_mtime,
-                reverse=True,
-            )
-            if not candidates:
-                log.error("No model found anywhere. Run src/train_mlflow.py first.")
-                state.model = None
-                return
+            # 2. Latest MLflow run
+            try:
+                client = mlflow.tracking.MlflowClient()
+                runs = client.search_runs(
+                    experiment_ids=["0"],
+                    order_by=["start_time DESC"],
+                    max_results=1,
+                )
+                if runs:
+                    run_id = runs[0].info.run_id
+                    model_uri = f"runs:/{run_id}/random_forest_model"
+                    state.model = mlflow.sklearn.load_model(model_uri)
+                    state.model_meta = {"source": "mlflow_run", "run_id": run_id}
+                    log.info("✅ Model loaded from MLflow run: %s", run_id)
+                else:
+                    raise ValueError("No MLflow runs found")
+            except Exception as exc2:
+                log.warning("MLflow run load failed (%s), trying local .joblib …", exc2)
+                _load_joblib()
+    else:
+        # Production image — mlflow not installed, go straight to joblib
+        log.info("MLflow not available — loading from joblib artefact.")
+        _load_joblib()
 
-            model_path = candidates[0]
-            state.model = joblib.load(model_path)
-            state.model_meta = {"source": "joblib", "path": str(model_path)}
-            log.info("✅ Model loaded from: %s", model_path)
-
-    # 3. Scaler (scaler_<experiment_name>.pkl — written by train_mlflow.py)
+    # Scaler — always loaded from artifacts/ regardless of model source
     scaler_candidates = sorted(
         MODEL_DIR.glob("scaler_*.pkl"),
         key=lambda p: p.stat().st_mtime,
@@ -122,6 +121,24 @@ def _load_model() -> None:
         state.scaler = None
 
     state.load_time = time.time()
+
+
+def _load_joblib() -> None:
+    """Fallback: load the latest .joblib from MODEL_DIR."""
+    candidates = sorted(
+        MODEL_DIR.glob("*.joblib"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    if not candidates:
+        log.error("No model found anywhere. Run src/train_mlflow.py first.")
+        state.model = None
+        return
+
+    model_path = candidates[0]
+    state.model = joblib.load(model_path)
+    state.model_meta = {"source": "joblib", "path": str(model_path)}
+    log.info("✅ Model loaded from: %s", model_path)
 
 
 # ── Lifespan ───────────────────────────────────────────────────────────────────
@@ -140,7 +157,7 @@ app = FastAPI(
         "Predicts direct normal irradiance (W/m²) for Perth, WA. "
         "Features: temperature_2m, cloud_cover, hour, month."
     ),
-    version="0.4.0",
+    version="1.0.0",
     lifespan=lifespan,
     docs_url=None,  # disable default Swagger UI
     redoc_url=None,  # disable default ReDoc
@@ -354,7 +371,7 @@ def root():
         <a class="secondary" href="/health">Health</a>
       </div>
       <div class="meta">
-        <div><strong>v0.4.0</strong><span>Version</span></div>
+        <div><strong>v1.0.0</strong><span>Version</span></div>
         <div><strong>POST /predict</strong><span>Inference</span></div>
         <div><strong>Perth, WA</strong><span>Location</span></div>
       </div>

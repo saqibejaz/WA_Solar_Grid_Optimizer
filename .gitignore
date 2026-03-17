@@ -21,6 +21,7 @@ mlflow.db
 artifacts/*.pkl
 artifacts/*.npy
 models/
+*.tar
 
 # Operating System
 Thumbs.db
